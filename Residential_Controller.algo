@@ -1,11 +1,11 @@
 '--- Parameters ---'
-General Variables
+"Inventory
 	NumberOfColumn = 1
 	NumberOfElevators = 2
 	NumberOfFloors = 10	
 
 Parameters for each Elevator[1-2]	
-	"ID
+	ID
 	State 							(Move or IDLE THEN)
 	Position = 0
 	Direction						(up : TRUE ir down : FALSE)
@@ -14,13 +14,13 @@ Parameters for each Elevator[1-2]
 	Door							(closed or Open )
 	Buffer   						(save the call requests to reach when it changes direction or become IDLE THEN)
 		Direction
-		List"
+		List
 
 Parameters for each Floor [1-10] 
 	number	
 	CallButton	
 
-GoodElevators[] = Elevator
+GoodElevators[] is a list of Elevators"
 '--- /Parameters ---'
 
 
@@ -55,6 +55,7 @@ END SEQUENCE
 SEQUENCE FindElevator(userPosition AND userDirection)
 "Find elevatyor - Phase 1"
 	EMPTY GoodElevators list
+	EMPTY BadElevators list
 	FOR EACH Elevator in elevator list
 		IF (Elevator and user are at the same Position AND have same Direction ) THEN
 			IF (Elevator.Direction = userDirection AND Elevator.Door = Open) THEN
@@ -66,17 +67,23 @@ SEQUENCE FindElevator(userPosition AND userDirection)
 		ELSE IF (Elevator is IDLE) THEN
 			ADD Elevator.ID TO the GoodElevators list
 		ELSE
-			CALL FindClosestElevatorWithShortestList WITH (ElevatorList AND userPosition) RETURNING Elevator ID
-			CALL UpdateList WITH (Buffer.List of Elevator[ID] AND userPosition)
-			SET BufferList.Direciton of this Elevator[ID] to userDirection
-			RETURN
+			ADD Elevator.ID to BadElevators List
 		ENDIF
 	ENDFOR
-	"--- FIND THE CLOSEST ELEVATOR WITH SHORTEST STOP LIST AMONG THE GOOD ELEVATORS"
-	CALL FindClosestElevatorWithShortestList WITH (GoodElevators list AND userPosition) RETURNING Elevator.ID
-	"Then knwoing the ID of the elevator we can find it and update its Stoplist"
-	CALL UpdateList WITH (Elevator.StopList AND userPosition) 
-	RETURN
+	IF GoodElevators list is NOT Empty Then
+		"--- FIND THE CLOSEST ELEVATOR WITH SHORTEST STOP LIST AMONG THE GOOD ELEVATORS"
+		CALL FindClosestElevatorWithShortestList WITH (GoodElevators list AND userPosition) RETURNING Elevator.ID
+		"Then knwoing the ID of the elevator we can find it and update its Stoplist"
+		CALL UpdateList WITH (Elevator.StopList AND userPosition) 
+		RETURN
+	ELSE
+		CALL FindClosestElevatorWithShortestList WITH (BadElevators List AND userPosition) RETURNING Elevator ID
+		CALL UpdateList WITH (Buffer.List of Elevator[ID] AND userPosition)
+		SET BufferList.Direciton of this Elevator[ID] to userDirection
+		RETURN
+	ENDIF
+	
+	
 END SEQUENCE 
 
 SEQUENCE FindElevator_Phase2 WITH (ElevatorList AND userPosition)
