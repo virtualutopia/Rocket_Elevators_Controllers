@@ -1,1 +1,238 @@
-Residential_Controller.algo
+General Variables
+	NumberOfColumn = 1
+	NumberOfElevators = 2
+	NumberOfFloors = 10
+
+	
+
+Inventory
+	Variables for each Elevator[1-2]{	
+		id
+		State 		"(Move or Idle)"
+		Position = 0
+		Direction	"(up : TRUE ir down : FALSE)"
+		StopList[1-NumberOfFloors]	"(it contains all the floors. 0 or 1. 1 for stop)"
+		Buffer {  "(save the call requests to reach when it changes direction or become Idle)"
+			Direction
+			List
+		}	
+		FloorRequestButton   "(A number in the range (1-10) AND which determin the desination Floor )"
+		Door		"(closed or Open )"
+	}
+
+	Variables for each Floor [1-10] {
+		number	
+		CallButton	"(Up or Down or NULL)"
+
+ReadyElevators[] = Elevator
+GoodElevators[] = Elevator
+
+
+
+ '--- --- Main Program --- ---'
+"--- CALL BUTTON PRESSED --- "
+SEQUENCE
+	WHILE operating DO
+		CALL Listen  RETURNING (userPosition AND userDirection)
+		CALL FindElevator WITH (userPosition AND userDirection) RETURNING ElNum
+		CALL Move WITH (Elevator[ElNum] AND userDirection)
+	ENDWHILE
+END SEQUENCE 
+"--- /CALL BUTTON PRESSED --- "
+
+
+
+'--- --- SEQUENCEs --- ---'
+
+SEQUENCE Listen(){
+	x = 1
+	REPEAT
+		x++
+	UNTIL (Floor[x].CallButton = UP OR Floor[x].CallButton = Down)
+	Floor[x].Number = x
+	RETURN (Floor[x].Number AND Floor[x].CallButton)																	
+}
+END SEQUENCE 
+
+
+
+SEQUENCE FindElevator(userPosition AND userDirection){
+"Find elevatyor - Phase 1"
+	FOR i = 1 TO NumberOfElevators 
+		IF (Elevator[i].Position = userPosition) THEN
+			IF (Elevator.Direction = userDirection AND Elevator.Door = Open) THEN
+			CALL UpdateList WITH (Elevator[i].StopList AND userPosition) 
+			RETURN 
+			ENDIF
+		ELSE IF (Elevator[i].Direction = userDirection = Up AND Elevator.Position < userPosition) OR (Elevator[i].Direction =  userDirection = Down AND Elevator.Position > userPosition)) THEN
+			ADD Elevator[i].id TO GoodElevators
+			"--- FIND THE BEST ELEVATOR ID AMONG THE GOOD ELEVATORS"
+			CALL FindClosestElevator WITH (GoodElevators AND userPosition) RETURNING Elevator.id
+			CALL UpdateList WITH (Elevator[i].StopList AND userPosition) 
+	RETURN
+		ELSE
+			CALL FindElevator_Phase2 WITH (userPosition AND userDirection)
+			RETURN
+		ENDIF
+	ENDFOR
+END SEQUENCE 
+SEQUENCE FindElevator_Phase2 WITH (userPosition AND userDirection)
+"Selecting the Nearest Elevator who has the shortest list"
+	SET z to NumberOfFloors
+	SET l to NumberOfFloors
+	SET x to 0
+	FOR EACH Elevator
+		IF ABS(Elevator.Position - userPosition) < z THEN
+			IF Elevator BufferList is smaller than l THEN
+				set z to ABS(Elevator.Position - userPosition)
+				set l to length of Elevator BufferList
+				SET x to Elevator Number
+			ENDIF
+		ENDIF
+	ENDFOR
+	CALL UpdateList WITH (Buffer.List of Elevator[x] AND userPosition)
+	SET BufferList.Direciton of this Elevator to userDirection
+END SEQUENCE
+"--- put the new stop in its polace in the StopList"
+SEQUENCE UpdateList(list AND number){			
+"--- Firs element of the list[] set to number"
+	push number into list
+	i = 2
+	WHILE (number > list[i]) 
+		swap (number AND list[i])
+		i++
+	ENDWHILE
+}
+END SEQUENCE 
+
+SEQUENCE Move(ElNum AND Direction){
+	CASE Direction OF
+		UP:
+			MoveUp(ElNum)
+		DOWN:
+			MoveDown(ElNum)
+	ENDCASE
+}
+END SEQUENCE 
+
+SEQUENCE MoveUp(ElNum){
+	REPEAT
+		Elevator[ElNum].Door = closed
+		Elevator[ElNum].Position++
+"--- fist in the stop list is the destination and will be remvoed as eleavtor arrives to the floor."		
+		IF (Elevator[ElNum].Position = StopList[1])
+			stop Elevator[ElNum]
+			Elevator[ElNum].Door = Open
+			remove Elevator[ElNum].StopList[1] from Elevator[ElNum].StopList
+			wait 10 seconds 
+			IF (Elevator[ElNum].FloorRequestButton == PRESSED) THEN
+					CALL FloorRequestButtonPressed WITH (ElNum AND Down)
+			ENDIF
+		ENDIF
+		
+	UNTIL (Elevator[ElNum].StopList = NULL or Elevator[ElNum].Position = NumberOfFloors)
+	IF the BufferList is NOT empty THEN
+		SET Elevator.StopList TO BufferList
+		SET Elevator.Direction TO Buffer.Direction
+	ELSE
+		Elevator[ElNum].State = Idle
+	ENDIF
+}
+END SEQUENCE 
+
+SEQUENCE MoveDown(ElNum){
+	REPEAT
+			last = Elevator[ElNum].StopList.length
+			Elevator[ElNum].Door = closed
+			Elevator[ElNum].Position--
+			IF (Elevator[ElNum].Position = Elevator[ElNum].StopList[last])
+				stop Elevator[ElNum]
+				Elevator[ElNum].Door = Open
+				remove Elevator[ElNum].StopList[last] from Elevator[ElNum].StopList
+				wait 10 seconds
+				IF (Elevator[ElNum].FloorRequestButton == PRESSED) THEN
+					CALL FloorRequestButtonPressed WITH (ElNum AND Down)
+				ENDIF
+			ENDIF
+	UNTIL (Elevator[ElNum].StopList = NULL or Elevator[ElNum].Position = 1)
+	IF the BufferList is NOT empty THEN
+		SET Elevator.StopList TO BufferList
+		SET Elevator.Direction TO Buffer.Direction
+	ELSE
+		Elevator[ElNum].State = Idle
+	ENDIF
+}
+END SEQUENCE 
+
+"--- find the closest elevatort to the user in a list of elevators"
+SEQUENCE FindClosestElevator(list AND Position){
+	FOR	i in list.length					
+		IF (ABS(list[z].Position - Position) > ABS(list[i].Position - Position)) THEN
+			z = i
+		ENDIF
+	ENDFOR
+	id = list[z].id
+	RETURN id
+}
+"--- finding an elevator with its ID"
+SEQUENCE FindElevatorByID(id){
+	FOR i = 1 TO NumberOfElevators
+		IF NumberOfElevators[i].id == id THEN
+			RETURN i
+		ENDIF
+	ENDFOR
+}
+END SEQUENCE 
+
+SEQUENCE FloorRequestButtonPressed(ElNum AND Direction) {
+	IF (Elevator[ElNum].StopList == NULL) THEN
+		CALL UpdateList WITH (Elevator[ElNum].StopList AND Elevator[ElNum].FloorRequestButton)
+		RETURN
+	ELSE IF (Direction == UP AND Elevator[ElNum].FloorRequestButton.value > Elevator[ElNum].Position) THEN
+		CALL UpdateList WITH (Elevator[ElNum].StopList AND Elevator[ElNum].FloorRequestButton)
+		RETURN
+	ELSE IF (Direction == DOWN AND Elevator[ElNum].FloorRequestButton.value > Elevator[ElNum].Position) THEN
+		CALL UpdateList WITH (Elevator[ElNum].StopList AND Elevator[ElNum].FloorRequestButton)
+		RETURN
+	ENDIF
+	ENDCASE
+}
+END SEQUENCE 
+
+
+
+
+----------------------END-------------------------
+----------------------END-------------------------
+----------------------END-------------------------
+
+"Find elevatyor - Phase 2"
+	REPEAT
+"--- if there was no elevator to assign AND find the free Elevators"
+		FOR i =1 TO NumberOfElevators
+			IF Elevator[i].State = Idle THEN
+				push Elevator[i].id into ReadyElevators[]
+			ENDIF
+		ENDFOR
+	UNTIL ReadyElevators not NULL
+"--- among the free Elevators find the one who is closer to the user"
+	z = 1
+	FOR i = 1 TO ReadyElevators.length - 1
+		IF (ABS(ReadyElevators[1].Position - userPosition) > ABS(ReadyElevators[i].Position - userPosition)) THEN
+			z = i
+		ENDIF
+	ENDFOR
+	id = GoodElevators[z].id
+	CALL FindElevatorByID WITH (id) RETURNING x 
+"--- Assign a WaitingList list into the free Elevator stoplist"
+	IF (WaitingListUp.length > WaitingListDown.length) THEN
+		FOR i = Elevator[x].Position TO WaitingListUp.length
+			ADD WaitingListUp[i] TO Elevator[x].StopList
+		ENDFOR
+	ELSE
+		FOR i = Elevator[x].Position TO WaitingListDown.length
+			ADD WaitingListDown[i] TO Elevator[x].StopList
+		ENDFOR
+	ENDIF
+	RETURN (i - 1)
+}
