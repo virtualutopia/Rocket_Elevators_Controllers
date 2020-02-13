@@ -28,11 +28,9 @@ GoodElevators[] is a list of Elevators"
 "--- CALL BUTTON PRESSED --- "
 SEQUENCE
 	WHILE operating DO
-		CALL Listen  RETURNING (userPosition AND userDirection)
-		CALL FindElevator WITH (userPosition AND userDirection) RETURNING Elevator.ID
-		IF Elevator whith this ID is IDLE THEN
-			CALL Move WITH (Elevator[Elevator.ID] AND userDirection)
-		ENDIF
+		CALL Listen  RETURNING (UserPosition AND UserDirection)
+		CALL FindElevator WITH (UserPosition AND UserDirection) RETURNING Elevator.ID
+		CALL Move WITH (Elevator.ID AND UserDirection)
 	ENDWHILE
 END SEQUENCE 
 "--- /CALL BUTTON PRESSED --- "
@@ -41,25 +39,28 @@ END SEQUENCE
 
 
 '--- --- SEQUENCEs Declaration--- ---'
-
-SEQUENCE Listen()
-	SET floor to 1
+SEQUENCE Listen
+	SET UserPosition = NULL
+	SET UserDirection = NULL
+	SET Floor to 1
 	REPEAT
-		INCREMENT floor by 1
-	UNTIL (a user push the UP or DOWN button in the floor )
-	RETURN (userPosition AND userDirection)																	
+		IF (a user call for elevator in the Floor) THEN
+			SET UserPosition to Floor
+			SET UserDirection to CallButton
+			RETURN (UserPosition AND UserDirection)
+		ENDIF
+		INCREMENT Floor by 1
+	UNTIL (Floor = NumberOfBasements)																	
 END SEQUENCE 
 
-
-
-SEQUENCE FindElevator(userPosition AND userDirection)
+SEQUENCE FindElevator USING (UserPosition AND UserDirection)
 "Find elevatyor - Phase 1"
 	EMPTY GoodElevators list
 	EMPTY BadElevators list
 	FOR EACH Elevator in elevator list
 		IF (Elevator and user are at the same Position AND have same Direction ) THEN
-			IF (Elevator.Direction = userDirection AND Elevator.Door = Open) THEN
-			CALL UpdateList WITH (Elevator.StopList AND userPosition) 
+			IF (Elevator.Direction = UserDirection AND ElevatorDoor is Open) THEN
+			CALL UpdateList WITH (Elevator.StopList AND UserPosition) 
 			RETURN 
 			ENDIF
 		ELSE IF (Elevator and user both go Up AND Elevator is below the user) OR (Elevator and user both go Down AND Elevator is above the user) THEN
@@ -72,31 +73,28 @@ SEQUENCE FindElevator(userPosition AND userDirection)
 	ENDFOR
 	IF GoodElevators list is NOT Empty Then
 		"--- FIND THE CLOSEST ELEVATOR WITH SHORTEST STOP LIST AMONG THE GOOD ELEVATORS"
-		CALL FindClosestElevatorWithShortestList WITH (GoodElevators list AND userPosition) RETURNING Elevator.ID
+		CALL FindClosestElevatorWithShortestList WITH (GoodElevators list AND UserPosition) RETURNING Elevator.ID
 		"Then knwoing the ID of the elevator we can find it and update its Stoplist"
-		CALL UpdateList WITH (Elevator.StopList AND userPosition) 
+		CALL UpdateList WITH (Elevator.StopList AND UserPosition) 
 		RETURN
 	ELSE
-		CALL FindClosestElevatorWithShortestList WITH (BadElevators List AND userPosition) RETURNING Elevator ID
-		CALL UpdateList WITH (Buffer.List of Elevator[ID] AND userPosition)
-		SET BufferList.Direciton of this Elevator[ID] to userDirection
+		CALL FindClosestElevatorWithShortestList WITH (BadElevators List AND UserPosition) RETURNING Elevator ID
+		CALL UpdateList WITH (Buffer.List of Elevator[ID] AND UserPosition)
+		SET BufferList.Direciton of this Elevator[ID] to UserDirection
 		RETURN
-	ENDIF
-	
-	
+	ENDIF	
 END SEQUENCE 
 
-SEQUENCE FindElevator_Phase2 WITH (ElevatorList AND userPosition)
+SEQUENCE FindElevator_Phase2 USING (ElevatorList AND UserPosition)
 "Selecting the Nearest Elevator who has the shortest list"
 	SET z to NumberOfFloors
 	SET l to NumberOfFloors
-	SET x to 1
 	FOR EACH Elevator
 		IF the distance between elevatoer and the user is SMALLER than z THEN
-			IF Elevator BufferList is shorter than l THEN
+			IF Elevator stoplist is shorter than or equal to l THEN
 				set z to the distance between elevatoer and the user
-				set l to length of Elevator BufferList
-				SET x to Elevator ID
+				set l to length of Elevator stoplist
+				SET GoodElevator to Elevator ID
 			ENDIF
 		ENDIF
 	ENDFOR	
@@ -104,18 +102,18 @@ SEQUENCE FindElevator_Phase2 WITH (ElevatorList AND userPosition)
 END SEQUENCE
 
 "--- put the new stop at the beginning of the list and sort the list"
-SEQUENCE UpdateList WITH (Elevator.StopList AND userPosition)			
-	push userPosition into the Elevator.StopList
+SEQUENCE UpdateList USING (Elevator.StopList AND UserPosition)			
+	push UserPosition into the Elevator.StopList
 	SET i to 1
 	REPEAT
-		IF (userPosition is greater than the ith stop in the list) Then
-			swap (userPosition AND ith stop of the list)
+		IF (UserPosition is greater than the ith stop in the list) Then
+			swap (UserPosition AND ith stop of the list)
 		ENDIF
 		INCREMENT i
 	UNTIL the end of the elevator.StopList
 END SEQUENCE 
 
-SEQUENCE Move WITH (Elevator.ID AND Direction)
+SEQUENCE Move USING (Elevator.ID AND Direction)
 	CASE Direction OF
 		UP:
 			MoveUp WITH (Elevator.ID)
@@ -124,12 +122,12 @@ SEQUENCE Move WITH (Elevator.ID AND Direction)
 	ENDCASE
 END SEQUENCE 
 
-SEQUENCE MoveUp WITH (Elevator.ID)
+SEQUENCE MoveUp USING (Elevator.ID)
 	REPEAT
 		CLOSE the door of Elevator
 		INCREMENT Elevator Position by 1
 "--- fist in the stop list is the destination and will be remvoed as eleavtor arrives to the floor."		
-		IF Elevator Position is equalt to the  FIRST element in the StopList THEN
+		IF Elevator Position is equal to the  FIRST element in the StopList THEN
 			stop Elevator
 			Open the Door
 			remove the FIRST element of the StopList
@@ -139,21 +137,20 @@ SEQUENCE MoveUp WITH (Elevator.ID)
 			ENDIF
 		ENDIF
 	UNTIL (the end of the StopList OR arriving to the last floor)
-	IF the BufferList is NOT empty THEN
+	IF the BufferList is NOT EMPTY THEN
 		SET Elevator.StopList TO BufferList
 		SET Elevator.Direction TO Buffer.Direction
 		EMPTY BufferList
 	ELSE
 		CHANGE Elevator.State TO IDLE THEN
-		ENDIF
 	ENDIF
 END SEQUENCE 
 
-SEQUENCE MoveDown WITH (Elevator.ID)
+SEQUENCE MoveDown USING (Elevator.ID)
 	REPEAT
 			last = Elevator[Elevator.ID].StopList.length
 			CLOSE the door of Elevator
-			DECREMENT Elevator Position by 1
+			INCREASE Elevator Position by 1
 			IF Elevator Position is equalt to the LAST element in the StopList THEN
 				stop Elevator
 				Open the Door
@@ -174,7 +171,7 @@ SEQUENCE MoveDown WITH (Elevator.ID)
 	ENDIF
 END SEQUENCE 
 
-SEQUENCE FloorRequestButtonPressed(Elevator.ID AND Direction) 
+SEQUENCE FloorRequestButtonPressed USING (Elevator.ID AND Direction) 
 	IF (Elevator Direction is UP AND User desination is GREATER than the current floor)  THEN
 		CALL UpdateList WITH (Elevator.StopList AND FloorRequestButton)
 		RETURN

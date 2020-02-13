@@ -1,4 +1,145 @@
-Commercial_Controller.algo
+'--- Parameters ---'
+"Inventory
+	NumberOfBattries = 1
+    NumberOfColumn = 4
+	NumberOfElevatorsPerColumn = 3
+	NumberOfFloors = 60
+    NumberOfBasements = 6	
+
+Paremeters for each Column [1-4]
+    ID                              Columnt A: -6 to 1
+                                    Columnt B: 1 to 20
+                                    Columnt C: 1 and 21 to 40
+                                    Columnt D: 1 and 41 to 60
+Parameters for each Elevator[1-2]	
+	ID
+	State 							(Move or IDLE THEN)
+	Position = 0
+	Direction						(up : TRUE ir down : FALSE)
+	StopList [1 - NumberOfFloors]	(it contains all the floors. 0 or 1. 1 for stop)
+	FloorRequestButton   			(A number in the range (1-10) AND which determin the desination Floor )
+	Door							(closed or Open )
+	Buffer   						(save the call requests to reach when it changes direction or become IDLE THEN)
+		Direction
+		List
+    FloorDisplay
+
+Parameters for each Floor [1-10] 
+	number	
+	CallButton
 
 
+GoodElevators[] is a list of Elevators"
+'--- /Parameters ---'
 
+'--- --- Main Program --- ---'
+"--- User call the elevator either from basement or in a floor --- "
+SEQUENCE
+	WHILE operating DO
+		CALL Listen  RETURNING (UserPosition AND UserDestination)
+        CALL FindColumn WITH UserPosition AND UserDestination) RETURNING Column.ID
+		CALL FindElevator WITH (Column.ID AND UserPosition AND UserDestination) RETURNING Elevator.ID
+        CALL Move WITH (Elevator.ID AND UserDestination)
+	ENDWHILE
+END SEQUENCE 
+"--- /User call the elevator either from basement or in a floor --- "
+'--- --- /Main Program --- ---'
+
+
+'--- --- SEQUENCEs Declaration--- ---'
+
+SEQUENCE Listen
+	SET UserPosition = NULL
+	SET UserDestination = NULL
+    IF User entered the destination floor THEN
+        SET UserPosition to 1
+        SET UserDestination to eneterd value
+        RETURN (UserPosition AND UserDestination)
+    ENDIF
+    SET Basement to -1
+    "Check the basements for a call"
+    REPEAT
+        IF (a user push the UP button) THEN
+            SET UserPosition to Basement
+            SET UserDestination to 1
+            RETURN (UserPosition and UserDestination)
+        ENDIF
+        DECREASE Basement by 1
+    UNTIL (BASEMENT = NumberOfBasements)
+    "Check the higher floors for a call"
+    SET Floor to 2
+    REPEAT
+        IF (a user push the DOWN button in the Floor) THEN
+            SET UserPosition to Floor
+            SET UserDestination to 1
+            RETURN (UserPosition AND UserDestination)	
+        ENDIF
+        INCREMENT Floor by 1
+    UNTIL (Floor = NumberOfBasements)
+END SEQUENCE 
+
+SEQUENCE FindColumn USING (UserPosition and UserDestination)
+    IF UserDestination OR UserPosition is a basement THEN
+        SET Column.ID to A
+    ELSE IF UserDestination OR UserPosition is between 2 and 20 floor THEN
+        SET Column.ID to B
+    ELSE IF UserDestination OR UserPosition is between 21 and 40 floor THEN
+        SET Column.ID to C 
+    ELSE
+        SET Column.ID to D
+    ENDIF
+    RETURN Column.ID
+END SEQUENCE
+
+SEQUENCE FindElevator USING (Column.ID AND UserPosition AND UserDestination)
+    EMPTY GoodElevators list
+
+    FOR EACH Elevator in this Column.ID
+		IF (Elevator and user are at the 1st floor AND ElevatorDoor is Open) THEN
+			CALL UpdateList WITH (This ElevatorStopList AND UserDestination) 
+			RETURN 
+		ELSE 
+            CALL MeasurDistance WITH (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDestination) RETURNING ElevatorDistanceToGo
+            ADD ElevatorID into the GoodElevators
+		ENDIF
+    ENDFOR
+    CALL FindShortestDistanceToGo WITH (list of GoodElevators) RETURNING ElevatorID
+
+END SEQUENCE
+
+SEQUENCE MeasurDistance USING (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDestination)
+    "Accoding to elevator and user position and direction, there are 8 different conditions. 
+        for 2 conditions here is the formula:   |ElevatorPosition - UserPosition|
+        for the other 6 here is the formula:    |(ElevatorDestination - ElevatorPosition)| + |(ElevatorDestination - UserPosition)|"
+    "The folloing case consider a user either comes up from a basement level or comes down from a higher floor"
+    IF (User and the elevator are at the same direction and the elevator has not yet arrived to the floor) THEN
+        SET ElevatorDistanceToGo to |ElevatorPosition - UserPosition|
+    ELSE
+        SET ElevatorDistanceToGo to |(ElevatorDestination - ElevatorPosition)| + |(ElevatorDestination - UserPosition)|
+    ENDIF
+    RETURN ElevatorDistanceToGo
+END SEQUENCE
+
+SEQUENCE FindShortestDistanceToGo USING (list of GoodElevators)
+    SET DistanceToGo to the ElevatorDistanceToGo of the first elevator in the list
+    SET i to 2
+    WHILE i < list of GoodElevators length DO
+        IF DistanceToGo is > ith ElevatorDistanceToGo in the list THEN
+            SET DistanceToGo to ith ElevatorDistanceToGo
+            SET ID to ith ElevatorID
+        ENDIF
+    ENDFOR
+    RETURN ElevatorID
+END SEQUENCE
+"--- put the new stop at the beginning of the list and sort the list"
+SEQUENCE UpdateList USING (ElevatorStopList AND UserPosition)			
+	push UserPosition into the ElevatorStopList
+	SET i to 1
+	REPEAT
+		IF (UserPosition is greater than the ith stop in the list) THEN
+			swap (UserPosition AND ith stop of the list)
+		ENDIF
+		INCREMENT i
+	UNTIL the end of the ElevatorStopList
+END SEQUENCE 
+'--- --- /SEQUENCEs Declaration--- ---'
