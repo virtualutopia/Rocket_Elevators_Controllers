@@ -14,7 +14,7 @@ Paremeters for each Column [1-4]
 Parameters for each Elevator[1-2]	
 	ID
 	State 							(Move or IDLE THEN)
-	Position = 0
+	Position
 	Direction						(up : TRUE ir down : FALSE)
 	StopList [1 - NumberOfFloors]	(it contains all the floors. 0 or 1. 1 for stop)
 	FloorRequestButton   			(A number in the range (1-10) AND which determin the desination Floor )
@@ -28,8 +28,10 @@ Parameters for each Floor [1-10]
 	number	
 	CallButton
 
-
-GoodElevators[] is a list of Elevators"
+Parameters for each User
+    UserPositio
+    UserDirection
+    UserDestination "
 '--- /Parameters ---'
 
 '--- --- Main Program --- ---'
@@ -37,12 +39,11 @@ GoodElevators[] is a list of Elevators"
 SEQUENCE
 	WHILE operating DO
 		CALL Listen  RETURNING (UserPosition AND UserDestination)
-        CALL FindColumn WITH UserPosition AND UserDestination) RETURNING Column.ID
-		CALL FindElevator WITH (Column.ID AND UserPosition AND UserDestination) RETURNING Elevator.ID
-        CALL Move WITH (Elevator.ID AND UserDestination)
+        CALL FindColumn WITH UserPosition AND UserDestination) RETURNING ColumnID
+		CALL FindElevator WITH (ColumnID AND UserPosition AND UserDestination) RETURNING ElevatorID
+        CALL Move WITH (ElevatorID AND UserDestination)
 	ENDWHILE
 END SEQUENCE 
-"--- /User call the elevator either from basement or in a floor --- "
 '--- --- /Main Program --- ---'
 
 
@@ -51,18 +52,21 @@ END SEQUENCE
 SEQUENCE Listen
 	SET UserPosition = NULL
 	SET UserDestination = NULL
-    IF User entered the destination floor THEN
+    "At the ground floor:"
+    IF User entered a destination floor THEN
         SET UserPosition to 1
         SET UserDestination to eneterd value
-        RETURN (UserPosition AND UserDestination)
+        CALL FindUserDirection WITH (UserPosition and UserDestination)
+        RETURN (UserPosition AND UserDestination AND UserDirection)
     ENDIF
-    SET Basement to -1
     "Check the basements for a call"
+    SET Basement to -1
     REPEAT
         IF (a user push the UP button) THEN
-            SET UserPosition to Basement
+            SET UserPosition to the current Basement floor
             SET UserDestination to 1
-            RETURN (UserPosition and UserDestination)
+            RCALL FindUserDirection WITH (UserPosition and UserDestination)
+            RETURN (UserPosition AND UserDestination AND UserDirection)
         ENDIF
         DECREASE Basement by 1
     UNTIL (BASEMENT = NumberOfBasements)
@@ -70,44 +74,57 @@ SEQUENCE Listen
     SET Floor to 2
     REPEAT
         IF (a user push the DOWN button in the Floor) THEN
-            SET UserPosition to Floor
+            SET UserPosition to the current Floor
             SET UserDestination to 1
-            RETURN (UserPosition AND UserDestination)	
+            CALL FindUserDirection WITH (UserPosition and UserDestination)
+            RETURN (UserPosition AND UserDestination AND UserDirection)
         ENDIF
         INCREMENT Floor by 1
-    UNTIL (Floor = NumberOfBasements)
+    UNTIL (Floor = NumberOfFloors)
 END SEQUENCE 
-
+    
+SEQUENCE    
+    IF (UserDestinaion is greater than UserPosition) THEN
+        SET userDirection to UP
+    ELSE
+        SET userDirection to DOWN
+    ENDIF
+END SEQUENCE
 SEQUENCE FindColumn USING (UserPosition and UserDestination)
     IF UserDestination OR UserPosition is a basement THEN
-        SET Column.ID to A
+        SET ColumnID to A
     ELSE IF UserDestination OR UserPosition is between 2 and 20 floor THEN
-        SET Column.ID to B
+        SET ColumnID to B
     ELSE IF UserDestination OR UserPosition is between 21 and 40 floor THEN
-        SET Column.ID to C 
+        SET ColumnID to C 
     ELSE
-        SET Column.ID to D
+        SET ColumnID to D
     ENDIF
-    RETURN Column.ID
+    RETURN ColumnID
 END SEQUENCE
 
-SEQUENCE FindElevator USING (Column.ID AND UserPosition AND UserDestination)
-    EMPTY GoodElevators list
-
-    FOR EACH Elevator in this Column.ID
-		IF (Elevator and user are at the 1st floor AND ElevatorDoor is Open) THEN
-			CALL UpdateList WITH (This ElevatorStopList AND UserDestination) 
-			RETURN 
+SEQUENCE FindElevator USING (ColumnID AND UserPosition AND UserDestination)
+    EMPTY Elevators list
+"This funciton will assign an elevator to a call, based on how many floors it needs to travel to arrive to the user"
+    FOR EACH Elevator in this ColumnID
+		IF (Elevator and user are at the same floor AND both have same direction AND ElevatorDoor is Open) THEN
+			SET ElevatorDistanceToGo to 0
 		ELSE 
-            CALL MeasurDistance WITH (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDestination) RETURNING ElevatorDistanceToGo
-            ADD ElevatorID into the GoodElevators
+            CALL MeasurDistanceToGo WITH (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDirection) RETURNING ElevatorDistanceToGo
 		ENDIF
     ENDFOR
-    CALL FindShortestDistanceToGo WITH (list of GoodElevators) RETURNING ElevatorID
-
+    CALL FindShortestDistanceToGo WITH (list of Elevators in this Column) RETURNING ElevatorID
+   "knowing the ElevatorID, we need then to update its stop list or its buffer list, depending on the elevator and user directions"
+    IF userDirection is the same as ElevatorDirection AND Elevator has not arrived to the UserPosition THEN
+        CALL UpdateList WITH (ElevatorStopList AND UserPosition) 
+    ELSE
+        CALL UpdateList WITH (this ElevatorBufferList AND UserPosition)
+		SET BufferListDireciton of this Elevator[ID] to UserDirection
+    ENDIF
+    RETURN 
 END SEQUENCE
 
-SEQUENCE MeasurDistance USING (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDestination)
+SEQUENCE MeasurDistanceToGo USING (ElevatorPosition AND ElevatorDirection AND UserPosition AND UserDestination)
     "Accoding to elevator and user position and direction, there are 8 different conditions. 
         for 2 conditions here is the formula:   |ElevatorPosition - UserPosition|
         for the other 6 here is the formula:    |(ElevatorDestination - ElevatorPosition)| + |(ElevatorDestination - UserPosition)|"
@@ -120,26 +137,88 @@ SEQUENCE MeasurDistance USING (ElevatorPosition AND ElevatorDirection AND UserPo
     RETURN ElevatorDistanceToGo
 END SEQUENCE
 
-SEQUENCE FindShortestDistanceToGo USING (list of GoodElevators)
-    SET DistanceToGo to the ElevatorDistanceToGo of the first elevator in the list
-    SET i to 2
-    WHILE i < list of GoodElevators length DO
-        IF DistanceToGo is > ith ElevatorDistanceToGo in the list THEN
-            SET DistanceToGo to ith ElevatorDistanceToGo
-            SET ID to ith ElevatorID
-        ENDIF
+SEQUENCE FindShortestDistanceToGo USING (list of Elevators)
+    FOR EACH Elevator in the list
+        compare the distance and find one of the eleavtor with smallest DistanceToGo
     ENDFOR
     RETURN ElevatorID
 END SEQUENCE
+
 "--- put the new stop at the beginning of the list and sort the list"
 SEQUENCE UpdateList USING (ElevatorStopList AND UserPosition)			
-	push UserPosition into the ElevatorStopList
-	SET i to 1
-	REPEAT
-		IF (UserPosition is greater than the ith stop in the list) THEN
-			swap (UserPosition AND ith stop of the list)
-		ENDIF
-		INCREMENT i
-	UNTIL the end of the ElevatorStopList
+	push UserPosition into the ElevatorStopList and sort the list
 END SEQUENCE 
+
+SEQUENCE Move USING (ElevatorID)
+	CALL SecurityCheck WITH (ElevatorID)
+    IF (next stop in the ElevatorStopList is greater than the current ElevatorPosition) Then
+		CALL MoveUp WITH (ElevatorID)
+	ELSE
+		CALL MoveDown WITH (ElevatorID)
+	ENDIF
+END SEQUENCE 
+
+SEQUENCE MoveUp USING (ElevatorID)
+	REPEAT
+        CLOSE the door of the Elevator
+        SET FloorDisplay to ElevatorPosition
+		INCREMENT ElevatorPosition by 1
+"--- The first destination is the first Floor in the Stoplist. It will then be remvoed as eleavtor arrives to the floor."		
+		IF Elevator Position is equal to the FIRST Floor in the StopList THEN
+			stop Elevator
+			Open the Door
+			remove the this Floor from the StopList
+			wait 5 seconds 
+		ENDIF
+	UNTIL (the end of the StopList OR arriving to the last floor on the culumn)
+	IF the BufferList is NOT EMPTY THEN
+		SET ElevatorStopList TO BufferList
+		SET ElevatorDirection TO BufferListDirection
+		EMPTY BufferList
+		CALL Move WITH (ElevatorID)
+	ELSE
+		CHANGE ElevatorState TO IDLE THEN
+	ENDIF
+END SEQUENCE 
+
+SEQUENCE MoveDown USING (ElevatorID)
+	REPEAT
+        CLOSE the door of the Elevator
+        DECREASE ElevatorPosition by 1
+        SET FloorDisplay to ElevatorPosition
+        IF Elevator Position is equalt to the LAST FLOOR in the StopList THEN
+            stop Elevator
+            Open the Door
+            remove the LAST Floor from the StopList
+            wait 5 seconds
+        ENDIF
+	UNTIL (the end of the StopList OR arriving to the first Floor)
+	IF the BufferList is NOT EMPTY THEN
+		SET ElevatorStopList TO BufferList
+		SET ElevatorDirection TO BufferListDirection
+		EMPTY BufferList
+		CALL Move WITH (ElevatorID)
+	ELSE
+		CHANGE ElevatorState TO IDLE THEN
+		ENDIF
+	ENDIF
+END SEQUENCE 
+
+SEQUENCE SecurityCheck USING (ElevatorID)
+    SET DoorCheck to FALSE
+    SET WeightCheck to FALSE
+    REPEAT
+        IF (there is an obstable infront of the door sensor) THEN
+            BEEP!
+        ELSE
+            SET DoorCheck to TRUE
+        ENDIF
+
+        IF (the total weight is greater than the elevator capacity) THEN
+            BEEP!
+        ELSE
+            SET WeightCheck to TRUE
+        ENDIF
+    UNTIL DoorCheck and WeightCheck are TRUE
+END SEQUENCE
 '--- --- /SEQUENCEs Declaration--- ---'
