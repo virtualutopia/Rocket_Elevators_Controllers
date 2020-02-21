@@ -65,7 +65,7 @@ SEQUENCE FindElevator USING (UserPosition AND UserDirection)
 		IF (Elevator and user are at the same Position AND have same Direction ) THEN
 			IF (ElevatorDoor is Open) THEN
 				CALL UpdateList WITH (ElevatorStopList AND UserPosition) 
-			RETURN 
+				RETURN 
 			ENDIF
 		ELSE IF (Elevator and user both go Up AND Elevator is below the user) OR (Elevator and user both go Down AND Elevator is above the user) THEN
 			ADD ElevatorID TO the GoodElevators list
