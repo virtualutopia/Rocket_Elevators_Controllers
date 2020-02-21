@@ -1,8 +1,6 @@
-# Residential Controller 
-import random
 import time
-# --- Classes ---
 
+# --- Classes ---
 class CallButton():
     def __init__(self, direction, floor):
         self.direction = direction
@@ -113,73 +111,51 @@ class Controller():
                 best = elevator
         return best
     def RequestElevator(self, RequestedFloor, Direction):
-        #  print('user is here: ', RequestedFloor, 'and going ',Direction)
         GoodElevators = []
         BadElevators = []
-        # print ('User is at ', RequestedFloor, ' and is goind', Direction)
         for elevator in self.columnList[0].elevatorList:
             print ('elvator', elevator.ID, ' is at floor ', elevator.Position, ' and its direction is ', elevator.Direction)
-            # time.sleep(.3)
-            # the first condition (if) is the ideal case and rarely happens 
             if (elevator.Position == RequestedFloor and elevator.Direction == Direction) :
                 if (elevator.Door == 'OPEN'):
                     self.UpdateList(elevator.StopList, RequestedFloor)
                     print('the elevator', elevator.ID, ' is comming')
                     self.move(elevator)
                     return elevator
-            # Usually the following cases happen
             elif (Direction == elevator.Direction):
                 if (elevator.Direction == 'UP' and elevator.Position < RequestedFloor):
                     GoodElevators.append(elevator)
-                    # print('el no', elevator.ID, 'added to GOOD1')
                 elif (elevator.Direction == 'DOWN' and elevator.Position > RequestedFloor):
                     GoodElevators.append(elevator)
-                    # print('el no', elevator.ID, 'added to GOOD2')
                 else:
                     BadElevators.append(elevator)
-            # other probable case: Elevator is IDLE
             elif (elevator.Direction == 'IDLE'):
                 GoodElevators.append(elevator)
-                # print('el no', elevator.ID, 'added to GOOD3')
-            # the worse case depening on elevator direction and position, elevator will be added to BADLIST
             else:
                 BadElevators.append(elevator)
-                # print('el no', elevator.ID, 'added to BAD2')
 
         if len(GoodElevators) >= 1:
-            # print('GOOD elevators')
-            # for i in range(len(GoodElevators)):
-            #     print ('el no. ', GoodElevators[i].ID)
             bestElevator = self.FindClosestWithShortestListElevator(GoodElevators, RequestedFloor)
             self.UpdateList(bestElevator.StopList, RequestedFloor)
             print('the elevator', bestElevator.ID, ' is comming')
-            # print('the elevator', bestElevator.ID, ' is comming')
             self.move(bestElevator)
             return bestElevator
         else :
-            # print('BAD elevators')
-            # for i in range(len(BadElevators)):
-            #     print ('el no. ', BadElevators[i].ID)
             bestElevator = self.FindTheShortestStopList(BadElevators)
             self.UpdateList(bestElevator.BufferList, RequestedFloor)
             bestElevator.BufferDirection = Direction
             print('the elevator', bestElevator.ID, ' is comming')
-            # print('the badelevator', bestElevator.ID, ' is comming')
             self.move(bestElevator)
             return bestElevator
     
     def move(self, elevator):
-        # print('elevator1: ', elevator)
-        # print('length stoplist: ', len(elevator.StopList))
         while (len(elevator.StopList) > 0) :
-            # print('stops: ', elevator.StopList) 
-            # time.sleep(3)
             if (elevator.StopList[0] > elevator.Position) :
                 elevator.Direction = 'UP'
                 while (elevator.Position < elevator.StopList[0]):
                     elevator.Position += 1
                     print('Elevator ', elevator.ID, ' is at Floor ', elevator.Position)
                     time.sleep(.5)
+                    
                     if (elevator.Position == len(self.columnList)):
                         elevator.Direction = 'IDLE'
                 elevator.Door = 'OPEN'
@@ -210,37 +186,12 @@ class Controller():
             elevator.direction = 'IDLE'
 
     def RequestFloor(self, elevator, RequestedFloor):
-        # print('requestedFloor: ', RequestedFloor, 'elevatorID: ', elevator.ID, elevator.StopList)
-        # RequestedFloor = int(input('input your destionation floor: '))
-        # if (elevator.Direction != 'DOWN' and RequestedFloor > elevator.Position) or (elevator.Direction != 'UP' and RequestedFloor < elevator.Position) or (len(elevator.StopList) == 0):
             self.UpdateList(elevator.StopList, RequestedFloor)
-            # print('elevatorID: ', elevator.ID, elevator.StopList)
             self.move(elevator)
             return
-        # else :
-        #     return 
 # --- /Classes ---
 
-# --- NO SCENARIO - AUTOMATED VERSION ---
-def AutomatedVersion ():
-    controller = Controller(1, 10, 3)
-    # --- Initialization of the elevators --- 
-    for j in range (len(controller.columnList)):
-        for i in range (len(controller.columnList[j].elevatorList)) :
-            controller.columnList[j].elevatorList[i].Position = random.randint(1, len(controller.columnList[j].floorList))
-            controller.columnList[j].elevatorList[i].StopList.append(random.randint(1, 10))
-            if (controller.columnList[j].elevatorList[i].StopList[0] > controller.columnList[j].elevatorList[i].Position) :
-                controller.columnList[j].elevatorList[i].Direction = 'UP'
-            else : 
-                controller.columnList[j].elevatorList[i].Direction = 'DOWN'
-            random.seed((i + 10) * 10)
-    # --- /Initialization of the elevators --- 
-    callButton = controller.Listen()
-    elevator = controller.RequestElevator(callButton.Position, callButton.Direction)
-    RequestedFloor = int(input('input your destionation floor: '))
-    if (elevator.Direction != 'DOWN' and RequestedFloor > elevator.Position) or (elevator.Direction != 'UP' and RequestedFloor < elevator.Position) or (len(elevator.StopList) == 0):
-        controller.RequestFloor(elevator, RequestedFloor)
-# --- /NO SCENARIO - AUTOMATED VERSION ---
+
 
 # # --- Scenarios ---
 def Scenario1 ():
@@ -337,8 +288,7 @@ def Scenario3 ():
 
 # --- Main PRogram ---
 # Scenario1()
-# Scenario2()
+Scenario2()
 # Scenario3()
 
-AutomatedVersion ()
 # --- Main PRogram ---

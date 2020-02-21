@@ -1,6 +1,4 @@
 
-
-
 // --- Classes ----
 class CallButton {
     constructor(direction, floor){
@@ -66,10 +64,7 @@ class Controller {
             this.columnList.push(column);
         }
     }
-    // The method Listen is not used in the SCENARIOs but it is used when the program is runned on AUTOMATED version
-    Listen(){
-        // UNDER CONSTRUCTION
-    }
+
     UpdateList(List, Position){
         List.push(Position);
         List.sort(function(a, b){return a-b});
@@ -106,7 +101,6 @@ class Controller {
         var GoodElevators = [];
         var BadElevators = [];
         console.log('User is at ' + RequestedFloor + ' and is going ' + Direction);
-        // ###time.sleep
         for (var elevator of this.columnList[0].elevatorList){
             console.log('elvator ' + elevator.ID + ' is at ' + elevator.Position + ' floor and its direction is ' + elevator.Direction);
             if (elevator.Position == RequestedFloor && elevator.Direction == Direction){
@@ -134,17 +128,10 @@ class Controller {
                 BadElevators.push(elevator);
             }
         }
-        // for (elevator of GoodElevators){
-        //     console.log('Good elevator ID no.' + elevator.ID);
-        // }
-        // for (elevator of BadElevators){
-        //     console.log('Bad elevator ID no.' + elevator.ID);
-        // }
         if (GoodElevators.length >= 1) {
             var bestElevator = this.FindClosestWithShortestListElevator(GoodElevators, RequestedFloor);
             this.UpdateList(bestElevator.StopList, RequestedFloor);
-            console.log('the Good2 elevator ' + bestElevator.ID + ' is comming');
-            // console.log('its stoplist is: ' + bestElevator.StopList)
+            console.log('the elevator ' + bestElevator.ID + ' is comming');
             this.move(bestElevator);
             return bestElevator;
         }
@@ -152,20 +139,18 @@ class Controller {
             var bestElevator = this.FindTheShortestStopList(BadElevators);
             this.UpdateList(bestElevator.BufferList, RequestedFloor);
             bestElevator.BufferDirection = Direction;
-            console.log('the Bad2 elevator ' + bestElevator.ID + 'is comming');
+            console.log('the elevator ' + bestElevator.ID + 'is comming');
             this.move(bestElevator);
             return bestElevator;
         }
     }
     move(elevator){
         while (elevator.StopList.length > 0){
-            // time.sleep
             if (elevator.StopList[0] > elevator.Position){
                 elevator.Direction = 'UP';
                 while (elevator.Position < elevator.StopList[0]){
                     elevator.Position += 1;
                     console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position + 'Floor');
-                    // time.sleep
                     if (elevator.Position == this.columnList.length){
                         elevator.Direction = 'IDLE';
                     }
@@ -179,7 +164,6 @@ class Controller {
                 while (elevator.Position > elevator.StopList[0]){
                     elevator.Position -= 1;
                     console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position);
-                    // time.sleep
                     if (elevator.Position == 1){
                         elevator.Direction = 'IDLE';
                     }
@@ -189,7 +173,6 @@ class Controller {
                 elevator.StopList.pop();
             }
             
-            // time.sleep(1)
             elevator.Door = 'CLOSED';
             console.log('Door is closed');
             elevator.Direction = 'IDLE';
@@ -205,31 +188,13 @@ class Controller {
         }
     }
     RequestFloor(elevator, RequestedFloor){
-        // console.log(elevator.StopList);
-        console.log('StopList' + elevator.StopList)
-        // if ((elevator.Direction != 'DOWN' & RequestedFloor > elevator.Position) || (elevator.Direction != 'UP' & RequestedFloor < elevator.Position) || (elevator.StopList.length == 0)){
+        
         this.UpdateList(elevator.StopList, RequestedFloor);
         this.move(elevator);
         return;
     }   
 }
-
 // --- /Classes ----   
-
-// //---- Reading the requested Value from terminal
-// const readline = require('readline');
-
-// const rl = readline.createInterface({
-// input: process.stdin,
-// output: process.stdout
-// });
-// rl.question('input your destionation floor: ', (answer) => {
-//     // TODO: Log the answer in a database
-//     console.log(`Requested floor is: ${answer}`);
-//     controller.RequestFloor(elevator, answer)
-//     rl.close();
-// });
-// //---- /Reading the requested Value from terminal
 
 
 // --- Scenarios ---
@@ -251,7 +216,6 @@ function Scenario1(){
     elevator = controller1.RequestElevator(RequestedFloor, Direction);
     controller1.RequestFloor(elevator, Destination);
 }
-
 function Scenario2(){
     console.log('******************* ******************* *******************');
     console.log('*******************      Scenario 2     *******************');
@@ -291,7 +255,6 @@ function Scenario2(){
     elevator = controller2.RequestElevator(RequestedFloor, Direction);
     controller2.RequestFloor(elevator, Destination);
 }
-
 function Scenario3(){
     console.log('******************* ******************* *******************');
     console.log('*******************      Scenario 3     *******************');
@@ -328,6 +291,6 @@ function Scenario3(){
 
 // --- Main PRogram ---
 Scenario1();
-Scenario2();
-Scenario3();
+// Scenario2();
+// Scenario3();
 // --- /Main PRogram ---
