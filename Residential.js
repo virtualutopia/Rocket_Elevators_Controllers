@@ -150,7 +150,7 @@ class Controller {
                 elevator.Direction = 'UP';
                 while (elevator.Position < elevator.StopList[0]){
                     elevator.Position += 1;
-                    console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position + 'Floor');
+                    console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position);
                     if (elevator.Position == this.columnList.length){
                         elevator.Direction = 'IDLE';
                     }

@@ -57,35 +57,7 @@ class Controller():
             self.columnList.append(Column(i +1, howManyFloors, howManyElevatorsPerColumn))
 
     # The method Listen is not used in the SCENARIOs but it is used when the program is runned on AUTOMATED version
-    def Listen(self):
-        while True:
-            try:
-                x = int(input('Which floor are you calling from?   : '))
-            except ValueError:
-                print('ERROR::: enter a vlid number!')
-            if (x >= 1 and x <= len(self.columnList[0].floorList)) :
-                self.columnList[0].callButtonList[x].Position = int(x)
-                break
-            else:
-                print('ERROR::: enter a vlid number!') 
-            
-        
-        while True:
-            try:
-                dir = input('What is your direction(U/D)?  : ')
-            except ValueError:
-                print('ERROR::: enter a vlid number!')
-            if (dir in ['u', 'U', 'up', 'UP', 'Up', 'd', 'D', 'down', 'Down', 'DOWN']):
-                if (dir in ['u', 'U', 'up', 'UP', 'Up']):
-                    self.columnList[0].callButtonList[x].Direction = 'UP'
-                    break
-                elif (dir in ['d', 'D', 'down', 'Down', 'DOWN']):
-                    self.columnList[0].callButtonList[x].Direction = 'DOWN'
-                    break
-            else:
-                print('ERROR::: enter a vlid direction (U/D)!')
-            
-        return self.columnList[0].callButtonList[x]
+
             
     def UpdateList(self, elList, Position):
         elList.append(Position)
