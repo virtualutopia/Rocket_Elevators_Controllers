@@ -1,9 +1,6 @@
 # Residential Controller 
 import random
 import time
-
-
- 
 # --- Classes ---
 
 class CallButton():
@@ -30,6 +27,7 @@ class Column():
             if i != 1 :
                 callbutton = CallButton('DOWN', i)
                 self.callButtonList.append(callbutton)
+
             if i != numberOfFloors :
                 callbutton = CallButton('UP', i)
                 self.callButtonList.append(callbutton)
@@ -42,7 +40,6 @@ class FloorRequestButton():
 class Elevator():
     def __init__(self, ID, numberOfFloors):
         self.ID = ID
-        # self.State = 'IDLE'
         self.Position = 1
         self.Direction = 'UP'
         self.StopList = [] 
@@ -61,7 +58,7 @@ class Controller():
         for i in range(howManyColumns):
             self.columnList.append(Column(i +1, howManyFloors, howManyElevatorsPerColumn))
 
-
+    # The method Listen is not used in the SCENARIOs but it is used when the program is runned on AUTOMATED version
     def Listen(self):
         while True:
             try:
@@ -92,12 +89,11 @@ class Controller():
             
         return self.columnList[0].callButtonList[x]
             
-    def UpdateList(self, elList, Position, state):
-        elList.append([Position, state])
+    def UpdateList(self, elList, Position):
+        elList.append(Position)
         elList.sort()
     # finding the elevator which has the shortest stopList and is closer to the user position
     def FindClosestWithShortestListElevator(self, elevatorsList, userPosition):
-        # print ('FindClosestWithShortestListElevator elevators: ', elevators)
         distance = len(self.columnList[0].floorList)
         best = elevatorsList[0]
         listLength = 10
@@ -116,26 +112,27 @@ class Controller():
                 listLength = len(elevator.StopList)
                 best = elevator
         return best
-    def RequestElevator(self, columnID, Position, Direction):
-        #  print('user is here: ', Position, 'and going ',Direction)
+    def RequestElevator(self, RequestedFloor, Direction):
+        #  print('user is here: ', RequestedFloor, 'and going ',Direction)
         GoodElevators = []
         BadElevators = []
-        print ('User is at ', Position, ' and is goind', Direction)
-        for elevator in self.columnList[columnID - 1].elevatorList:
+        # print ('User is at ', RequestedFloor, ' and is goind', Direction)
+        for elevator in self.columnList[0].elevatorList:
             print ('elvator', elevator.ID, ' is at floor ', elevator.Position, ' and its direction is ', elevator.Direction)
-            time.sleep(.3)
+            # time.sleep(.3)
             # the first condition (if) is the ideal case and rarely happens 
-            if (elevator.Position == Position and elevator.Direction == Direction) :
+            if (elevator.Position == RequestedFloor and elevator.Direction == Direction) :
                 if (elevator.Door == 'OPEN'):
-                    self.UpdateList(elevator.StopList, Position, 'IN')
+                    self.UpdateList(elevator.StopList, RequestedFloor)
                     print('the elevator', elevator.ID, ' is comming')
+                    self.move(elevator)
                     return elevator
             # Usually the following cases happen
             elif (Direction == elevator.Direction):
-                if (elevator.Direction == 'UP' and elevator.Position < Position):
+                if (elevator.Direction == 'UP' and elevator.Position < RequestedFloor):
                     GoodElevators.append(elevator)
                     # print('el no', elevator.ID, 'added to GOOD1')
-                elif (elevator.Direction == 'DOWN' and elevator.Position > Position):
+                elif (elevator.Direction == 'DOWN' and elevator.Position > RequestedFloor):
                     GoodElevators.append(elevator)
                     # print('el no', elevator.ID, 'added to GOOD2')
                 else:
@@ -153,20 +150,22 @@ class Controller():
             # print('GOOD elevators')
             # for i in range(len(GoodElevators)):
             #     print ('el no. ', GoodElevators[i].ID)
-            bestElevator = self.FindClosestWithShortestListElevator(GoodElevators, Position)
-            self.UpdateList(bestElevator.StopList, Position, 'IN')
+            bestElevator = self.FindClosestWithShortestListElevator(GoodElevators, RequestedFloor)
+            self.UpdateList(bestElevator.StopList, RequestedFloor)
             print('the elevator', bestElevator.ID, ' is comming')
             # print('the elevator', bestElevator.ID, ' is comming')
+            self.move(bestElevator)
             return bestElevator
         else :
             # print('BAD elevators')
             # for i in range(len(BadElevators)):
             #     print ('el no. ', BadElevators[i].ID)
             bestElevator = self.FindTheShortestStopList(BadElevators)
-            self.UpdateList(bestElevator.BufferList, Position, 'IN')
+            self.UpdateList(bestElevator.BufferList, RequestedFloor)
             bestElevator.BufferDirection = Direction
             print('the elevator', bestElevator.ID, ' is comming')
             # print('the badelevator', bestElevator.ID, ' is comming')
+            self.move(bestElevator)
             return bestElevator
     
     def move(self, elevator):
@@ -174,206 +173,172 @@ class Controller():
         # print('length stoplist: ', len(elevator.StopList))
         while (len(elevator.StopList) > 0) :
             # print('stops: ', elevator.StopList) 
-            time.sleep(3)
-            if (elevator.StopList[0][0] > elevator.Position) :
+            # time.sleep(3)
+            if (elevator.StopList[0] > elevator.Position) :
                 elevator.Direction = 'UP'
-                while (elevator.Position < elevator.StopList[0][0]):
+                while (elevator.Position < elevator.StopList[0]):
                     elevator.Position += 1
                     print('Elevator ', elevator.ID, ' is at Floor ', elevator.Position)
-                    time.sleep(1)
+                    time.sleep(.5)
                     if (elevator.Position == len(self.columnList)):
                         elevator.Direction = 'IDLE'
                 elevator.Door = 'OPEN'
                 print('Door is open')
-                if (elevator.StopList[0][1] == 'IN'):
-                    elevator.StopList.pop(0)
-                    RequestedFloor = int(input('input your destionation floor: '))
-                    controller.RequestFloor(elevator, RequestedFloor)
-                else:
-                    elevator.StopList.pop(0)
+                elevator.StopList.pop(0)
             else:
                 elevator.Direction = 'DOWN'
-                while (elevator.Position > elevator.StopList[0][0]):
+                while (elevator.Position > elevator.StopList[0]):
                     elevator.Position -= 1
                     print('Elevator ', elevator.ID, ' is at Floor ', elevator.Position)
-                    time.sleep(1)
+                    time.sleep(.5)
                     if (elevator.Position == 1):
                         elevator.Direction = 'IDLE'
                 elevator.Door = 'OPEN'
                 print('Door is open')
-                if (elevator.StopList[0][1] == 'IN'):
-                    elevator.StopList.pop(len(elevator.StopList) - 1)
-                    RequestedFloor = int(input('input your destionation floor: '))
-                    # print('requestedFloor: ', RequestedFloor)
-                    controller.RequestFloor(elevator, RequestedFloor)
-                else:
-                    elevator.StopList.pop(len(elevator.StopList) - 1)
-            time.sleep(1)
+                elevator.StopList.pop(len(elevator.StopList) - 1)
+            time.sleep(.5)
             elevator.Door = 'CLOSED'
             print('Door is closed')
             elevator.Direction = 'IDLE'
 
         if (len(elevator.BufferList) > 0) :
-            # print('stoplist: ', elevator.StopList)
-            # print('bufferlist: ', elevator.BufferList)
             elevator.StopList = elevator.BufferList
-            # for i in range(len(elevator.BufferList) - 1) :
-            #     elevator.StopList[i] = elevator.BufferList[i]
-            #     print('stop ', elevator.StopList[i], 'buffer ', elevator.BufferList[i])
             elevator.Direction = elevator.BufferDirection
             elevator.BufferList = []
-            # print('stoplist: ', elevator.StopList)
-            # print('stoplist: ', elevator.BufferList)
             self.move(elevator)
         else :
             elevator.direction = 'IDLE'
-        # else :
-            # while (elevator.Position <= len(column.floorList) or len(elevator.BufferList) > 0):
-            #         if elevator.BufferList == 'UP' :
-            #             elevator.Position += 1
-            #         else :
-            #             elevator.Position -= 1
-            #         print('Elevator ', elevator.ID, ' is at ', elevator.Position, 'Floor')
-            #         time.sleep(1)
-            # elevator.Door = 'OPEN'
-            # print('Door is open')
-            # time.sleep(1)
-            # elevator.Door = 'CLOSED'
-            # print('Door is closed')
 
     def RequestFloor(self, elevator, RequestedFloor):
         # print('requestedFloor: ', RequestedFloor, 'elevatorID: ', elevator.ID, elevator.StopList)
-        if (elevator.Direction != 'DOWN' and RequestedFloor > elevator.Position) or (elevator.Direction != 'UP' and RequestedFloor < elevator.Position) or (len(elevator.StopList) == 0):
-            self.UpdateList(elevator.StopList, RequestedFloor, 'OUT')
+        # RequestedFloor = int(input('input your destionation floor: '))
+        # if (elevator.Direction != 'DOWN' and RequestedFloor > elevator.Position) or (elevator.Direction != 'UP' and RequestedFloor < elevator.Position) or (len(elevator.StopList) == 0):
+            self.UpdateList(elevator.StopList, RequestedFloor)
             # print('elevatorID: ', elevator.ID, elevator.StopList)
+            self.move(elevator)
             return
-        else :
-            return 
+        # else :
+        #     return 
 # --- /Classes ---
 
+# --- NO SCENARIO - AUTOMATED VERSION ---
+def AutomatedVersion ():
+    controller = Controller(1, 10, 3)
+    # --- Initialization of the elevators --- 
+    for j in range (len(controller.columnList)):
+        for i in range (len(controller.columnList[j].elevatorList)) :
+            controller.columnList[j].elevatorList[i].Position = random.randint(1, len(controller.columnList[j].floorList))
+            controller.columnList[j].elevatorList[i].StopList.append(random.randint(1, 10))
+            if (controller.columnList[j].elevatorList[i].StopList[0] > controller.columnList[j].elevatorList[i].Position) :
+                controller.columnList[j].elevatorList[i].Direction = 'UP'
+            else : 
+                controller.columnList[j].elevatorList[i].Direction = 'DOWN'
+            random.seed((i + 10) * 10)
+    # --- /Initialization of the elevators --- 
+    callButton = controller.Listen()
+    elevator = controller.RequestElevator(callButton.Position, callButton.Direction)
+    RequestedFloor = int(input('input your destionation floor: '))
+    if (elevator.Direction != 'DOWN' and RequestedFloor > elevator.Position) or (elevator.Direction != 'UP' and RequestedFloor < elevator.Position) or (len(elevator.StopList) == 0):
+        controller.RequestFloor(elevator, RequestedFloor)
+# --- /NO SCENARIO - AUTOMATED VERSION ---
+
+# # --- Scenarios ---
+def Scenario1 ():
+    print('******************* ******************* *******************')
+    print('*******************      Scenario 1     *******************')
+    print('******************* ******************* *******************')
+    controller1 = Controller(1, 10, 2)
+
+    controller1.columnList[0].elevatorList[0].Position = 2
+    controller1.columnList[0].elevatorList[0].Direction = 'IDLE'
+    controller1.columnList[0].elevatorList[1].Position = 6
+    controller1.columnList[0].elevatorList[1].Direction = 'IDLE'
+    print('******************* USER-1 goes from floor 3 to floor 7  *******************')
+    RequestedFloor = 3
+    Direction = 'UP'
+    Destination = 7
+
+    elevator = controller1.RequestElevator(RequestedFloor, Direction)
+    controller1.RequestFloor(elevator, Destination)
+
+def Scenario2 ():
+    print('******************* ******************* *******************')
+    print('*******************      Scenario 2     *******************')
+    print('******************* ******************* *******************')
+    controller2 = Controller(1, 10, 2)
+
+    controller2.columnList[0].elevatorList[0].Position = 10
+    controller2.columnList[0].elevatorList[0].Direction = 'IDLE'
+    controller2.columnList[0].elevatorList[1].Position = 3
+    controller2.columnList[0].elevatorList[1].Direction = 'IDLE'
 
 
-# # --- NO SCENARIO - AUTOMATED VERSION ---
-# controller = Controller(1, 10, 3)
-# # --- Initialization of the elevators --- 
-# for j in range (len(controller.columnList)):
-#     for i in range (len(controller.columnList[j].elevatorList)) :
-#         controller.columnList[j].elevatorList[i].Position = random.randint(1, len(controller.columnList[j].floorList))
-#         controller.columnList[j].elevatorList[i].StopList.append([random.randint(1, 10), 'OUT'])
-#         if (controller.columnList[j].elevatorList[i].StopList[0][0] > controller.columnList[j].elevatorList[i].Position) :
-#             controller.columnList[j].elevatorList[i].Direction = 'UP'
-#         else : 
-#             controller.columnList[j].elevatorList[i].Direction = 'DOWN'
-#         random.seed((i + 10) * 10)
-# # --- /Initialization of the elevators --- 
-# callButton = controller.Listen()
-# commingElevator = controller.RequestElevator(1, callButton.Position, callButton.Direction)
-# controller.move(commingElevator)
-# # --- /NO SCENARIO - AUTOMATED VERSION ---
-
-# # # --- Scenario 1 ---
-# controller = Controller(1, 10, 2)
-
-# controller.columnList[0].elevatorList[0].Position = 2
-# controller.columnList[0].elevatorList[0].Direction = 'IDLE'
-# controller.columnList[0].elevatorList[1].Position = 6
-# controller.columnList[0].elevatorList[1].Direction = 'IDLE'
-# userPosition = 3
-# userDirection = 'UP'
-# userDestination = 7
-
-# controller.columnList[0].callButtonList[userPosition].Position = userPosition
-# controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-
-# print('******************* Scenario 1  *******************')
-# print('******************* USER-1 goes from floor 3 to floor 7  *******************')
-# commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-# controller.move(commingElevator)
-
-# # # --- /Scenario 1 ---
-
-# # --- Scenario 2 ---
-controller = Controller(1, 10, 2)
-
-controller.columnList[0].elevatorList[0].Position = 10
-controller.columnList[0].elevatorList[0].Direction = 'IDLE'
-controller.columnList[0].elevatorList[1].Position = 3
-controller.columnList[0].elevatorList[1].Direction = 'IDLE'
-
-print('****** 1st user at Floor 1 ******')
-userPosition = 1
-userDirection = 'UP'
-userDestination = 6
-
-controller.columnList[0].callButtonList[userPosition].Position = userPosition
-controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-print('******************* Scenario 2 *******************');
-print('******************* USER-1 goes from floor 3 to floor 6  *******************')
-commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-controller.move(commingElevator)
-print('****** 2nd user at Floor 3 ******')
-print('****** 2nd user at Floor 3 ******')
-userPosition = 3
-userDirection = 'UP'
-userDestination = 5
-
-controller.columnList[0].callButtonList[userPosition].Position = userPosition
-controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-print('******************* USER-2 goes from floor 3 to floor 5  *******************')
-commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-controller.move(commingElevator)
-
-print('****** 3rd user at Floor 9 ******')
-print('****** 3rd user at Floor 9 ******')
-userPosition = 9
-userDirection = 'DOWN'
-userDestination = 2
-print('******************* USER-3 goes from floor 9 to floor 2  *******************')
-controller.columnList[0].callButtonList[userPosition].Position = userPosition
-controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-
-commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-controller.move(commingElevator)
-
-# # --- /Scenario 2 ---
+    print('******************* USER-1 goes from floor 1 to floor 6  *******************')
+    RequestedFloor = 1
+    Direction = 'UP'
+    Destination = 6
 
 
-# # --- Scenario 3 ---
 
-# controller = Controller(1, 10, 2)
+    elevator = controller2.RequestElevator(RequestedFloor, Direction)
+    controller2.RequestFloor(elevator, Destination)
 
-# controller.columnList[0].elevatorList[0].Position = 10
-# controller.columnList[0].elevatorList[0].Direction = 'IDLE'
-# controller.columnList[0].elevatorList[1].Position = 3
-# controller.columnList[0].elevatorList[1].Direction = 'UP'
-# controller.columnList[0].elevatorList[1].StopList.append([6,'OUT'])
-
-# print('****** 1st user at Floor 1 ******')
-# userPosition = 3
-# userDirection = 'DOWN'
-# userDestination = 2
-
-# controller.columnList[0].callButtonList[userPosition].Position = userPosition
-# controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-# print('******************* Scenario 3 *******************')
-# print('******************* USER-1 goes from floor 3 to floor 2  *******************')
-# commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-# controller.move(commingElevator)
-# # moving eleavtor 2 from floor 3 to floor 6
-# controller.move(controller.columnList[0].elevatorList[1])
-
-# print('****** 2nd user at Floor 10 ******')
-# print('****** 2nd user at Floor 10 ******')
-# userPosition = 10
-# userDirection = 'DOWN'
-# userDestination = 3
-# print('******************* USER-2 goes from floor 10 to floor 3  *******************')
-# controller.columnList[0].callButtonList[userPosition].Position = userPosition
-# controller.columnList[0].callButtonList[userPosition].Direction = userDirection
-
-# commingElevator = controller.RequestElevator(1, controller.columnList[0].callButtonList[userPosition].Position, controller.columnList[0].callButtonList[userPosition].Direction)
-# controller.move(commingElevator)
-
-# # --- /Scenario 3 ---
+    print('******************* USER-2 goes from floor 3 to floor 5  *******************')
+    RequestedFloor = 3
+    Direction = 'UP'
+    Destination = 5
 
 
+    elevator = controller2.RequestElevator(RequestedFloor, Direction)
+    controller2.RequestFloor(elevator, Destination)
+
+    print('******************* USER-3 goes from floor 9 to floor 2  *******************')
+    RequestedFloor = 9
+    Direction = 'DOWN'
+    Destination = 2
+
+
+    elevator = controller2.RequestElevator(RequestedFloor, Direction)
+    controller2.RequestFloor(elevator, Destination)
+
+def Scenario3 ():
+    print('******************* ******************* *******************')
+    print('*******************      Scenario 3     *******************')
+    print('******************* ******************* *******************')
+    controller3 = Controller(1, 10, 2)
+
+    controller3.columnList[0].elevatorList[0].Position = 10
+    controller3.columnList[0].elevatorList[0].Direction = 'IDLE'
+    controller3.columnList[0].elevatorList[1].Position = 3
+    controller3.columnList[0].elevatorList[1].Direction = 'UP'
+    controller3.columnList[0].elevatorList[1].StopList.append(6)
+
+
+    print('******************* USER-1 goes from floor 3 to floor 2  *******************')
+    RequestedFloor = 3
+    Direction = 'DOWN'
+    Destination = 2
+
+    elevator = controller3.RequestElevator(RequestedFloor, Direction)
+    controller3.RequestFloor(elevator, Destination)
+
+    print('moving eleavtor 2 from floor 3 to floor 6')
+    controller3.move(controller3.columnList[0].elevatorList[1])
+
+    print('******************* USER-2 goes from floor 10 to floor 3  *******************')
+    RequestedFloor = 10
+    Direction = 'DOWN'
+    Destination = 3
+
+    elevator = controller3.RequestElevator(RequestedFloor, Direction)
+    controller3.RequestFloor(elevator, Destination)
+# # --- /Scenarios ---
+
+
+# --- Main PRogram ---
+# Scenario1()
+# Scenario2()
+# Scenario3()
+
+AutomatedVersion ()
+# --- Main PRogram ---
