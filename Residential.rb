@@ -8,9 +8,9 @@ end
 class Column
     def initialize (id, numberOfFloors, numberofElevators)
         @ID = id
-        @elevatorList = Array.new
-        @floorList = Array.new
-        @callButtonList = Array.new
+        @elevatorList = []
+        @floorList = []
+        @callButtonList = []
     
         for x in 0..numberofElevators
             @elevatorList.push(x)
@@ -43,18 +43,61 @@ class Elevator
         @ID = id
         @Position = 1
         @Direction = "UP"
-        @StopList = Array.new
-        @FloorRequestButton = Array.new
+        @StopList = []
+        @FloorRequestButton = []
         @Door = "Closed"
         @BufferDirection = "UP"
-        @BufferList = Array.new
+        @BufferList = []
 
         for i in 0..numberOfFloors
             @FloorRequestButon.push(i)
         end
     end
 end
+class Controller
+    def initialize (howManyColumns, howManyFloors, howManyElevatorsPerColumn)
+        @columnList = []
 
+        for i in 0..howManyColumns
+            @columnList.push(i)
+        end
+    end
 
+    def UpdateList (List, Position)
+        List.push(Position)
+        List.sort
+    end
+    # finding the elevator which has the shortest stopList and is closer to the user position
+    def FindClosestWithShortestListElevator (elevatorsList, userPosition)
+        distance = @columnList[0]].floorList.size
+        listLength = @columnList[0].floorList.size
+        elevatorList.each {|elevator|
+            if (elevator.Position - userPosition).abs < distance
+                if (elevator.StopList.size <= listLength)
+                    listLength = elevator.StopList.size
+                    distance = (elevator.Position - userPosition).abs
+                    best = elevator
+                end
+            end
+        }
+        return best
+    end
+    def FindTheShortestStopList(elevatorsList)
+        istLength = 10
+        best = elevatorsList[0]
+        elevatorList.each {|elevator|
+            l = elevator.StopList.size
+            if (l <= listLength)
+                listLength = elevator.StopList.size
+                best = elevator
+            end
+        }
+        return best
+    end
 
-
+    def RequestElevator(RequestedFloor, Direction)
+        var GoodElevators = []
+        var BadElevators = []
+        puts ("User is at  #{RequestedFloor} and is going  #{Direction}");
+        
+    end
