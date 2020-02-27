@@ -1,0 +1,10 @@
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/bin/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.deps.json
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/bin/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.runtimeconfig.json
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/bin/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.runtimeconfig.dev.json
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/bin/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.dll
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/bin/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.pdb
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/obj/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.csprojAssemblyReference.cache
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/obj/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.AssemblyInfoInputs.cache
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/obj/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.AssemblyInfo.cs
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/obj/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.dll
+/Users/codeboxx/Documents/GitHub/Rocket_Elevators_Controllers/obj/Debug/netcoreapp3.1/Rocket_Elevators_Controllers.pdb

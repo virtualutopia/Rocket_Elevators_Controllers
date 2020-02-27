@@ -106,7 +106,7 @@ class Controller {
             if (elevator.Position == RequestedFloor && elevator.Direction == Direction){
                 if (elevator.Door == 'OPEN'){
                     this.UpdateList(elevator.StopList, RequestedFloor);
-                    console.log('the best elevator No:' + elevator.ID + ' is comming');
+                    console.log('the elevator No:' + elevator.ID + ' is comming');
                     return elevator;
                 }
             }
@@ -150,7 +150,7 @@ class Controller {
                 elevator.Direction = 'UP';
                 while (elevator.Position < elevator.StopList[0]){
                     elevator.Position += 1;
-                    console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position);
+                    console.log('Elevator ' + elevator.ID + ' is at floor ' + elevator.Position + 'Floor');
                     if (elevator.Position == this.columnList.length){
                         elevator.Direction = 'IDLE';
                     }
@@ -188,7 +188,7 @@ class Controller {
         }
     }
     RequestFloor(elevator, RequestedFloor){
-        
+        console.log('StopList' + elevator.StopList)
         this.UpdateList(elevator.StopList, RequestedFloor);
         this.move(elevator);
         return;
