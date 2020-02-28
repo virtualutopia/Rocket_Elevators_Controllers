@@ -10,38 +10,39 @@ namespace Rocket_Elevators_Controllers
         public int Floor;
         public string Light;
 
+        // Construction of a CallButton
         public CallButton(string d, int f)
         {
             this.Direction = d;
             this.Floor = f;
             this.Light = "OFF";
         }
-        public string direction
-        {
-            get { return Direction; }
-            set { Direction = value; }
-        }
-        public int floor
-        {
-            get { return floor; }
-            set { floor = value; }
-        }
+        // public string direction
+        // {
+        //     get { return Direction; }
+        //     set { Direction = value; }
+        // }
+        // public int floor
+        // {
+        //     get { return floor; }
+        //     set { floor = value; }
+        // }
     }
-    class FloorRequestButton
-    {
-        public int ID;
-        public bool Pressed = false;
+    // class FloorRequestButton
+    // {
+    //     public int ID;
+    //     public bool Pressed = false;
 
-        public FloorRequestButton(int ID)
-        {
-            this.ID = ID;
-        }
-        public int id
-        {
-            get { return ID; }
-            set { ID = value; }
-        }
-    }
+    //     public FloorRequestButton(int ID)
+    //     {
+    //         this.ID = ID;
+    //     }
+    //     public int id
+    //     {
+    //         get { return ID; }
+    //         set { ID = value; }
+    //     }
+    // }
     class Elevator
     {
         public int ID;
@@ -52,6 +53,8 @@ namespace Rocket_Elevators_Controllers
         public string Door = "CLOSED";
         public string BufferDirection = "UP";
         public List<int> BufferList = new List<int>();
+        
+        // Construction of an elevator
         public Elevator(int ID, int fromFloor, int toFloor)
         {
             this.ID = ID;
@@ -71,18 +74,25 @@ namespace Rocket_Elevators_Controllers
         // public int fromFloor;
         // public int numberOfFloors;
         // public int numberOfElevators;
+        
+        // Construction of a column
         public Column(int ID, int fromFloor, int toFloor, int numberOfElevators)
         {
             this.ID = ID;
             this.floorList.Add(1);
+            // Creating Floor List for each Column
             for (int i = fromFloor; i <= toFloor; i = i + 1)
             {
                 this.floorList.Add(i);
             }
+            // Creating Elevator List for each Column by creating new elevators,
+	        // knowing the range of floors for each column (fromFloor - toFloor)
             for (int i = 1; i <= numberOfElevators; i = i + 1)
             {
                 this.elevatorList.Add(new Elevator(i, fromFloor, toFloor));
             }
+            // Creating CallButtons for Basements (at if clause) and then for floors (at else clause)
+	        // knowing the range of floors for each column (fromFloor - toFloor)
             if (ID == 1)
             {
                 for (int i = toFloor; i <= fromFloor; i = i + 1)
@@ -93,7 +103,7 @@ namespace Rocket_Elevators_Controllers
             }
             else
             {
-                for (int i = fromFloor; i <= (toFloor); i = i + 1)
+                for (int i = fromFloor; i <= toFloor; i = i + 1)
                 {
                     CallButton callButton = new CallButton("DOWN", i);
                     this.callButonList.Add(callButton);
@@ -105,6 +115,8 @@ namespace Rocket_Elevators_Controllers
     class Battery
     {
         public List<Column> columnList = new List<Column>();
+        
+        // Construction of a battery
         public Battery(int numberOfColumns, int totalNumberOfFloors, int numberOfBasements, int numberOfElevatorPerColumn)
         {
             
@@ -143,13 +155,13 @@ namespace Rocket_Elevators_Controllers
             // }   
         }
         
-        public void RequestElevator(int FloorNumbre)
+        public void RequestElevator(int FloorNumber)
         {
-            Column currentColumn = this.columnList[0];
             // Finding the proper column
+            Column currentColumn = this.columnList[0];
             foreach(var item in this.columnList)
             {
-                if ( FloorNumbre >= item.floorList[1] && FloorNumbre <= item.floorList.Last()) 
+                if ( FloorNumber >= item.floorList[1] && FloorNumber <= item.floorList.Last()) 
                 {
                     currentColumn = item;
                     break;
@@ -158,7 +170,7 @@ namespace Rocket_Elevators_Controllers
 
             // determining the USER Direction
             string Direction;
-            if (FloorNumbre < 1)
+            if (FloorNumber < 1)
             {
                 Direction = "UP";
             }
@@ -167,18 +179,16 @@ namespace Rocket_Elevators_Controllers
                 Direction = "DOWN";
             }
             Console.WriteLine("Serving culomn:  columnID {0} from floor {1} to floor {2}", currentColumn.ID, currentColumn.floorList[1], currentColumn.floorList.Last());
-            // Finding the best elevator based on comparing DistanceToGo
+            // finding the closest elevator Based on on comparing DistanceToGo AND the following Priority: 
+            //      1- the moving elevator which is arriving to the user
+            //      2- the IDLE elevator
+            //      3- other elevators
             int DistanceToGo = 1000;
             int distance;
             List<Elevator> FirstPriority = new List<Elevator>();
             List<Elevator> SecondPriority = new List<Elevator>();
             List<Elevator> ThirdPriority = new List<Elevator>();
-            
             Elevator BestElevator = currentColumn.elevatorList[0];
-            // finding the closest elevator Based on the following Priority: 
-            //      1- the moving elevator which is arriving to the user
-            //      2- the IDLE elevator
-            //      3- other elevators
             foreach(Elevator elev in currentColumn.elevatorList)
             {   
                 int currentDestination;
@@ -191,11 +201,11 @@ namespace Rocket_Elevators_Controllers
                     currentDestination = elev.StopList.Last();
                 }
                 Console.Write("111elID = {0}, elPos = {1}, elDir = {2}, current Destination = {3}", elev.ID, elev.Position, elev.Direction, currentDestination);
-                distance = CalculateDistanceToGo(elev, FloorNumbre, Direction);
+                distance = CalculateDistanceToGo(elev, FloorNumber, Direction);
                 Console.WriteLine(". distanceToGo: {0}", distance);  
                 if (elev.Direction == Direction)
                 {
-                    if ((Direction == "UP" && elev.Position <= FloorNumbre) | (Direction == "DOWN" && elev.Position >= FloorNumbre))
+                    if ((Direction == "UP" && elev.Position <= FloorNumber) | (Direction == "DOWN" && elev.Position >= FloorNumber))
                     {
                         FirstPriority.Add(elev);
                     }
@@ -213,7 +223,7 @@ namespace Rocket_Elevators_Controllers
             {
                 foreach (Elevator elev in FirstPriority)
                 {
-                    distance = CalculateDistanceToGo(elev, FloorNumbre, Direction);
+                    distance = CalculateDistanceToGo(elev, FloorNumber, Direction);
                     // Console.WriteLine("#1elevator ID: {0} => DistanceToGo = {1}", elev.ID, distance);           
                     if ( distance <= DistanceToGo)
                     {
@@ -226,7 +236,7 @@ namespace Rocket_Elevators_Controllers
             {
                 foreach (Elevator elev in SecondPriority)
                 {
-                    distance = CalculateDistanceToGo(elev, FloorNumbre, Direction);
+                    distance = CalculateDistanceToGo(elev, FloorNumber, Direction);
                     // Console.WriteLine("#2elevator ID: {0} => DistanceToGo = {1}", elev.ID, distance);           
                     if ( distance <= DistanceToGo)
                     {
@@ -239,7 +249,7 @@ namespace Rocket_Elevators_Controllers
             {
                 foreach (Elevator elev in ThirdPriority)
                 {
-                    distance = CalculateDistanceToGo(elev, FloorNumbre, Direction);
+                    distance = CalculateDistanceToGo(elev, FloorNumber, Direction);
                     // Console.WriteLine("#3elevator ID: {0} => DistanceToGo = {1}", elev.ID, distance);           
                     if ( distance <= DistanceToGo)
                     {
@@ -250,21 +260,19 @@ namespace Rocket_Elevators_Controllers
             }
             // Console.WriteLine("BEST ELEVATOR is ID: {0}", BestElevator.ID);
             // Updating the STOPLIST of the selected elevator
-            if (BestElevator.Direction == Direction | BestElevator.Direction == "IDLE")
-            {
-                if (BestElevator.Direction == "DOWN" && BestElevator.Position >= FloorNumbre)
-                {
-                    Console.Write("%1 Take column {0} ElevatorID: {1} which is currently at floor {2}. ", currentColumn.ID, BestElevator.ID, BestElevator.Position);
-                    UpdateList(BestElevator, BestElevator.StopList, FloorNumbre);
+            if (BestElevator.Direction == Direction | BestElevator.Direction == "IDLE"){
+                if (BestElevator.Direction == "DOWN" && BestElevator.Position >= FloorNumber){
+                    Console.Write(" Take column {0} ElevatorID: {1} which is currently at floor {2}. ", currentColumn.ID, BestElevator.ID, BestElevator.Position);
+                    UpdateList(BestElevator, BestElevator.StopList, FloorNumber);
                     UpdateList(BestElevator, BestElevator.StopList, 1);
                     Console.WriteLine(" StopList: [ " + string.Join(" | ", BestElevator.StopList) + " ]");
                     // Console.WriteLine("*** 1%Take the column {0}, elevator {1} *** ", currentColumn.ID, BestElevator.ID);
                     move(BestElevator);
                 }
-                else if (BestElevator.Direction == "UP" && BestElevator.Position <= FloorNumbre)
+                else if (BestElevator.Direction == "UP" && BestElevator.Position <= FloorNumber)
                 {
-                    Console.Write("%2 Take column {0} ElevatorID: {1} which is currently at floor {2}. ", currentColumn.ID, BestElevator.ID, BestElevator.Position);
-                    UpdateList(BestElevator, BestElevator.StopList, FloorNumbre);
+                    Console.Write(" Take column {0} ElevatorID: {1} which is currently at floor {2}. ", currentColumn.ID, BestElevator.ID, BestElevator.Position);
+                    UpdateList(BestElevator, BestElevator.StopList, FloorNumber);
                     UpdateList(BestElevator, BestElevator.StopList, 1);
                     Console.WriteLine(" StopList: [ " + string.Join(" | ", BestElevator.StopList) + " ]");
                     // Console.WriteLine("*** 2%Take the column {0}, elevator {1} *** ", currentColumn.ID, BestElevator.ID);
@@ -272,8 +280,8 @@ namespace Rocket_Elevators_Controllers
                 }
                 else if (BestElevator.Direction == "IDLE")
                 {
-                    Console.Write("%3 Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
-                    UpdateList(BestElevator, BestElevator.StopList, FloorNumbre);
+                    Console.Write(" Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
+                    UpdateList(BestElevator, BestElevator.StopList, FloorNumber);
                     UpdateList(BestElevator, BestElevator.StopList, 1);
                     Console.WriteLine(" StopList: [ " + string.Join(" | ", BestElevator.StopList) + " ]");
                     // Console.WriteLine("*** 2%Take the column {0}, elevator {1} *** ", currentColumn.ID, BestElevator.ID);
@@ -281,13 +289,13 @@ namespace Rocket_Elevators_Controllers
                 }
                 else
                 {
-                    Console.Write("%4 Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
-                    UpdateList(BestElevator, BestElevator.BufferList, FloorNumbre);
+                    Console.Write(" Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
+                    UpdateList(BestElevator, BestElevator.BufferList, FloorNumber);
                     UpdateList(BestElevator, BestElevator.BufferList, 1);
                     Console.Write(" StopList: [ " + string.Join(" | ", BestElevator.StopList) + " ]");
                     Console.WriteLine(" BufferLsit: [ " + string.Join(" | ", BestElevator.BufferList) + " ]");
                     // Console.WriteLine("*** 3%Take the column {0}, elevator {1} *** ", currentColumn.ID, BestElevator.ID);
-                    if (FloorNumbre > 1)
+                    if (FloorNumber > 1)
                     {
                         BestElevator.BufferDirection = "DOWN";
                         move(BestElevator);
@@ -298,19 +306,16 @@ namespace Rocket_Elevators_Controllers
                         move(BestElevator);
                     }
                 }
-            // Updating the BUFFERLIST t of the selected elevator
-            }
-            else
-            {
-                Console.Write("%5 Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
-                UpdateList(BestElevator, BestElevator.BufferList, FloorNumbre);
+            } else{
+                Console.Write(" Take ElevatorID: {0} which is currently at floor {1}. ", BestElevator.ID, BestElevator.Position);
+                UpdateList(BestElevator, BestElevator.BufferList, FloorNumber);
                 UpdateList(BestElevator, BestElevator.StopList, 1);
                 Console.Write(" StopList: [ " + string.Join(" | ", BestElevator.StopList) + " ]");
                 Console.WriteLine(" BufferLsit: [ " + string.Join(" | ", BestElevator.BufferList) + " ]");
 
                 // Console.WriteLine("*** 4%Take the column {0}, elevator {1} *** ", currentColumn.ID, BestElevator.ID);
                 // For Basements
-                if (FloorNumbre > 1)
+                if (FloorNumber > 1)
                 {
                     BestElevator.BufferDirection = "DOWN";
                     move(BestElevator);
@@ -382,7 +387,7 @@ namespace Rocket_Elevators_Controllers
            {
                 // Console.Write("%6ElevatorID: {0}", BestElevator.ID);
                 UpdateList(BestElevator, BestElevator.BufferList, RequestedFloor);
-                // For Basements
+                // Setting Buffer direction For Basements
                 if (RequestedFloor > 1)
                 {
                     BestElevator.BufferDirection = "DOWN";
@@ -571,8 +576,7 @@ namespace Rocket_Elevators_Controllers
                 Console.WriteLine("******** User at floor 1. He goes UP to floor 36 ********");
                 Console.WriteLine("*********** Elevator 1 from Column 3 is expected **********");
                 Console.WriteLine("******************* ******************* *******************");
-                Battery2.AssignElevator(36);
-                
+                Battery2.AssignElevator(36);   
             }
             // Scenario 3
             void Scenario3 ()
@@ -610,7 +614,7 @@ namespace Rocket_Elevators_Controllers
 
                 
             }
-             // Scenario 4
+            // Scenario 4
             void Scenario4 ()
             {
                 Console.WriteLine("******************* ******************* *******************");
